@@ -1,0 +1,93 @@
+#!/bin/bash
+
+export USER_ID=${USER_ID:-$UID}
+
+case "$1" in
+"init")
+    mkdir -p ./docker/conf.d
+    mkdir -p ./node/public
+    tee ./docker/Dockerfile << \EOS
+FROM node:14-alpine3.12
+
+RUN : 'コンテナ内で必要なパッケージをインストール' && \
+    apk add --no-cache shadow nginx && \
+    mkdir -p /run/nginx && \
+    : 'nodeユーザをsudoersに追加' && \
+    apk add --no-cache sudo && \
+    echo 'node ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+USER node
+WORKDIR /home/node/
+EXPOSE 80
+
+# スタートアップコマンド（docker up の度に実行される）
+CMD ["/bin/ash", "/home/node/startup.sh"]
+EOS
+    tee ./docker/conf.d/default.conf << \EOS
+server {
+    listen 80 default_server;
+    location / {
+        root /home/node/public/;
+        index index.html;
+    }
+}
+EOS
+    tee ./node/.gitignore << \EOS
+/.*
+node_modules/
+EOS
+    tee ./node/startup.sh << \EOS
+# -- node@service://app/
+
+# 環境変数 UID が与えられていれば node ユーザIDを $UID に合わせる
+if [ "$UID" != "" ]; then
+    # node ユーザIDを変更
+    sudo usermod -u $UID node
+    # node のホームディレクトリのパーミッション修正
+    sudo chown -R node:node /home/node/
+fi
+
+# nginx サーバ起動
+sudo /usr/sbin/nginx -g 'daemon off;'
+EOS
+    tee ./node/public/index.html << \EOS
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nginx Server</title>
+</head>
+<body>
+    <p>Hello, Nginx!</p>
+</body>
+</html>
+EOS
+    tee ./docker-compose.yml << \EOS
+version: "3.8"
+
+services:
+  # NodeJS + Nginx App
+  app:
+    build: ./docker/
+    logging:
+      driver: json-file
+    # restart: always
+    tty: true
+    # 所属ネットワーク: localhost
+    network_mode: host
+    volumes:
+      - ./docker/conf.d/:/etc/nginx/conf.d/
+      - ./node/:/home/node/
+    environment:
+      # USER_ID: node のユーザIDを docker 実行ユーザIDに合わせたい場合に利用 (export USER_ID=$UID)
+      ## ユーザIDを合わせないと ./node/ (docker://api:/home/node/) 内のファイル編集が出来なくなる
+      UID: ${USER_ID}
+      # TimeZone: Asia/Tokyo
+      TZ: Asia/Tokyo
+EOS
+    ;;
+*)
+    docker-compose $*
+    ;;
+esac

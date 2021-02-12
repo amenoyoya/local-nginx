@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  # NodeJS + Nginx App
+  app:
+    build: ./docker/
+    logging:
+      driver: json-file
+    # restart: always
+    tty: true
+    # 所属ネットワーク: localhost
+    network_mode: host
+    volumes:
+      - ./docker/conf.d/:/etc/nginx/conf.d/
+      - ./node/:/home/node/
+    environment:
+      # USER_ID: node のユーザIDを docker 実行ユーザIDに合わせたい場合に利用 (export USER_ID=$UID)
+      ## ユーザIDを合わせないと ./node/ (docker://api:/home/node/) 内のファイル編集が出来なくなる
+      UID: ${USER_ID}
+      # TimeZone: Asia/Tokyo
+      TZ: Asia/Tokyo
