@@ -8,17 +8,17 @@
 
 ### Initialize
 ```bash
-# ./n に実行権限付与
-$ chmod +x ./n
+# ./x に実行権限付与
+$ chmod +x ./x
 
 # Dockerプロジェクト展開
-$ ./n init
+$ ./x init
 ```
 
 ### Setup
 ```bash
 # dockerコンテナ起動
-$ ./n up -d
+$ ./x up -d
 
 # => reverse proxy from ./config
 ```

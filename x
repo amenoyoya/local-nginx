@@ -28,10 +28,11 @@ services:
     environment:
       STAGE: "${STAGE:-local}" # 本番環境の場合は production を指定（実際の Let's Encrypt に SSL 申請を行う）
       DOMAINS: "$DOMAINS" # 'domain -> http://port-forward, ...'
+      WEBSOCKET: "true" # WebSocket接続を許可
 EOS
     ;;
 "set-stage")
-    sed -i "s/^export STAGE=.*/export STAGE=${2:-local}/" ./n
+    sed -i "s/^export STAGE=.*/export STAGE=${2:-local}/" ./x
     ;;
 *)
     docker-compose $*
